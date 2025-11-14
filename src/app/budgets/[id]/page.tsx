@@ -1,0 +1,212 @@
+'use client';
+
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import type { Row } from '@/app/types';
+import BudgetVisualisation from '@/components/BudgetVisualisation';
+
+export default function BudgetPage() {
+  const params = useParams();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const budgetId = (params as any)?.id ?? '';
+
+  const [activeTab, setActiveTab] = useState<'input' | 'visualisation'>('input');
+  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'annually' | 'custom'>('monthly');
+  const [customDays, setCustomDays] = useState<number>(30);
+
+  const [incomeRows, setIncomeRows] = useState<Row[]>([
+    { id: `${Date.now()}-inc`, label: '', value: '' },
+  ]);
+  const [expenseRows, setExpenseRows] = useState<Row[]>([
+    { id: `${Date.now()}-exp`, label: '', value: '' },
+  ]);
+
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
+
+  useEffect(() => {
+    const sum = incomeRows.reduce((acc, row) => {
+      const val = parseFloat(row.value);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+    setTotalIncome(sum);
+  }, [incomeRows]);
+
+  useEffect(() => {
+    const sum = expenseRows.reduce((acc, row) => {
+      const val = parseFloat(row.value);
+      return acc + (isNaN(val) ? 0 : val);
+    }, 0);
+    setTotalExpense(sum);
+  }, [expenseRows]);
+
+  // kept in parent so both tabs read/write same state
+  function addIncomeRow() {
+    setIncomeRows((prev) => [...prev, { id: `${Date.now()}-inc`, label: '', value: '' }]);
+  }
+  function addExpenseRow() {
+    setExpenseRows((prev) => [...prev, { id: `${Date.now()}-exp`, label: '', value: '' }]);
+  }
+
+  function handleRowChange(
+    list: Row[],
+    setList: (rows: Row[]) => void,
+    rowId: string,
+    field: 'label' | 'value',
+    newValue: string,
+  ) {
+    setList(
+      list.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              [field]: newValue,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function handleRowBlur(list: Row[], setList: (rows: Row[]) => void, row: Row) {
+    const nameEmpty = row.label.trim() === '';
+    const valueEmpty = row.value.trim() === '';
+    if (nameEmpty && valueEmpty && list.length > 1) {
+      setList(list.filter((r) => r.id !== row.id));
+    }
+  }
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Budget: {budgetId}</h1>
+
+      {/* Time period selection */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {(['monthly', 'weekly', 'annually', 'custom'] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className={`rounded-md px-3 py-1 text-sm font-medium border ${
+              period === p ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-600 dark:bg-black dark:text-blue-400'
+            }`}
+          >
+            {p.charAt(0).toUpperCase() + p.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {period === 'custom' && (
+        <div className="mb-4 flex items-center gap-2">
+          <label htmlFor="custom-days" className="text-sm font-medium">
+            Days per cycle:
+          </label>
+          <input
+            id="custom-days"
+            type="number"
+            min={1}
+            value={customDays}
+            onChange={(e) => setCustomDays(parseInt(e.target.value, 10) || 0)}
+            className="w-20 rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+          />
+        </div>
+      )}
+
+      {/* Tab selection */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setActiveTab('input')}
+          className={`rounded-md px-3 py-1 text-sm font-medium border ${
+            activeTab === 'input' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-600 border-green-600 dark:bg-black dark:text-green-400'
+          }`}
+        >
+          Data Input
+        </button>
+        <button
+          onClick={() => setActiveTab('visualisation')}
+          className={`rounded-md px-3 py-1 text-sm font-medium border ${
+            activeTab === 'visualisation' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-600 border-purple-600 dark:bg-black dark:text-purple-400'
+          }`}
+        >
+          Visualisation
+        </button>
+      </div>
+
+      {/* TAB CONTENT */}
+      {activeTab === 'input' ? (
+        <>
+          {/* ---- BudgetInput (kept inline to avoid circular imports) ---- */}
+          <div>
+            {/* Income input */}
+            <section className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">Income</h2>
+              {incomeRows.map((row) => (
+                <div key={row.id} className="flex flex-wrap gap-2 mb-2">
+                  <input
+                    value={row.label}
+                    onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'label', e.target.value)}
+                    onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
+                    placeholder="Category"
+                    className="flex-grow min-w-[10rem] rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                  />
+                  <input
+                    type="number"
+                    value={row.value}
+                    onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'value', e.target.value)}
+                    onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
+                    placeholder="Amount"
+                    className="w-32 rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                  />
+                </div>
+              ))}
+              <button onClick={addIncomeRow} className="mt-2 rounded-md bg-green-600 px-3 py-1 text-white hover:bg-green-700">
+                Add Income
+              </button>
+            </section>
+
+            {/* Expenditure input */}
+            <section className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">Expenditure</h2>
+              {expenseRows.map((row) => (
+                <div key={row.id} className="flex flex-wrap gap-2 mb-2">
+                  <input
+                    value={row.label}
+                    onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'label', e.target.value)}
+                    onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
+                    placeholder="Category"
+                    className="flex-grow min-w-[10rem] rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                  />
+                  <input
+                    type="number"
+                    value={row.value}
+                    onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'value', e.target.value)}
+                    onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
+                    placeholder="Amount"
+                    className="w-32 rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                  />
+                </div>
+              ))}
+              <button onClick={addExpenseRow} className="mt-2 rounded-md bg-red-600 px-3 py-1 text-white hover:bg-red-700">
+                Add Expense
+              </button>
+            </section>
+
+            {/* Totals */}
+            <div className="mt-4 font-medium space-y-1">
+              <p>Total Income: {totalIncome.toFixed(2)}</p>
+              <p>Total Expenses: {totalExpense.toFixed(2)}</p>
+              <p>
+                Net: {totalIncome - totalExpense >= 0 ? '+' : ''}
+                {(totalIncome - totalExpense).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <BudgetVisualisation
+          incomeRows={incomeRows}
+          expenseRows={expenseRows}
+
+        />
+      )}
+    </div>
+  );
+}
