@@ -27,6 +27,7 @@ type NodeLayout = NodeDatum & {
   y: number;
   width: number;
   height: number;
+  _snapY?: number;
 };
 
 type LinkDatum = {
@@ -59,7 +60,7 @@ export default function BudgetSankey({
 
     const toNum = (s: string) => {
       const n = parseFloat(s);
-      return isNaN(n) ? 0 : n;
+      return Number.isNaN(n) ? 0 : n;
     };
 
     // --- Build base data -----------------------------------------------------
@@ -223,8 +224,8 @@ export default function BudgetSankey({
     }
 
     const nodes: NodeDatum[] = nodesRaw.map((n) => {
-      const vIn = nodeIn.get(n.id) || 0;
-      const vOut = nodeOut.get(n.id) || 0;
+      const vIn = nodeIn.get(n.id) ?? 0;
+      const vOut = nodeOut.get(n.id) ?? 0;
       const val = Math.max(vIn, vOut, n.value || 0);
       return { ...n, value: val };
     });
@@ -338,7 +339,12 @@ export default function BudgetSankey({
     const linkGroup = gRoot.append('g').attr('class', 'links');
     const nodeGroup = gRoot.append('g').attr('class', 'nodes');
 
-    const linkSelection = linkGroup
+    const linkSelection: d3.Selection<
+      SVGPathElement,
+      LinkDatum,
+      SVGGElement,
+      unknown
+    > = linkGroup
       .selectAll<SVGPathElement, LinkDatum>('path')
       .data(links)
       .join('path')
@@ -349,7 +355,12 @@ export default function BudgetSankey({
       .attr('fill-opacity', 0.35)
       .attr('stroke', 'none');
 
-    const nodeSelection = nodeGroup
+    const nodeSelection: d3.Selection<
+      SVGGElement,
+      NodeLayout,
+      SVGGElement,
+      unknown
+    > = nodeGroup
       .selectAll<SVGGElement, NodeLayout>('g')
       .data(nodesLayout)
       .join('g')
@@ -389,19 +400,19 @@ export default function BudgetSankey({
         if (!source || !target) return '';
 
         const sTotal =
-          nodeOut.get(l.source) ||
-          nodeTotalMap.get(l.source) ||
+          nodeOut.get(l.source) ??
+          nodeTotalMap.get(l.source) ??
           0;
         const tTotal =
-          nodeIn.get(l.target) ||
-          nodeTotalMap.get(l.target) ||
+          nodeIn.get(l.target) ??
+          nodeTotalMap.get(l.target) ??
           0;
 
         const sH = sTotal > 0 ? (l.value / sTotal) * source.height : 0;
         const tH = tTotal > 0 ? (l.value / tTotal) * target.height : 0;
 
-        const sUsed = nodeSourceOffset.get(l.source) || 0;
-        const tUsed = nodeTargetOffset.get(l.target) || 0;
+        const sUsed = nodeSourceOffset.get(l.source) ?? 0;
+        const tUsed = nodeTargetOffset.get(l.target) ?? 0;
 
         const syTop = source.y + sUsed;
         const syBottom = syTop + sH;
@@ -430,7 +441,7 @@ export default function BudgetSankey({
 
     // --- Highlight logic -----------------------------------------------------
     const clearHighlight = () => {
-      (linkSelection as any)
+      linkSelection
         .transition()
         .duration(220)
         .ease(d3.easeCubicOut)
@@ -453,7 +464,9 @@ export default function BudgetSankey({
       visitedNodes.add(startId);
 
       while (queue.length) {
-        const nid = queue.shift()!;
+        const nid = queue.shift();
+        if (!nid) break;
+
         links.forEach((l, idx) => {
           if (visitedLinks.has(idx)) return;
           if (l.source === nid || l.target === nid) {
@@ -467,7 +480,7 @@ export default function BudgetSankey({
         });
       }
 
-      (linkSelection as any)
+      linkSelection
         .transition()
         .duration(220)
         .ease(d3.easeCubicOut)
@@ -491,11 +504,12 @@ export default function BudgetSankey({
     // --- Helper: animate one node to targetY, and keep links in sync --------
     const animateNodeTo = (node: NodeLayout, targetY: number) => {
       const startY = node.y;
-      if (Math.abs(targetY - startY) < 0.5) return;
+      if (Math.abs(targetY - startY) < 0.5) {
+        node.y = targetY;
+        return;
+      }
 
-      const sel = nodeSelection.filter(
-        (nd) => (nd as NodeLayout).id === node.id,
-      );
+      const sel = nodeSelection.filter((nd) => nd.id === node.id);
 
       sel
         .interrupt()
@@ -503,7 +517,9 @@ export default function BudgetSankey({
         .duration(260)
         .ease(d3.easeCubicOut)
         .tween('move', function () {
-          const self = d3.select(this as SVGGElement);
+          const self = d3.select<SVGGElement, NodeLayout>(
+            this as SVGGElement,
+          );
           const interp = d3.interpolateNumber(startY, targetY);
           return (t: number) => {
             node.y = interp(t);
@@ -514,116 +530,120 @@ export default function BudgetSankey({
     };
 
     // --- Drag with live continuous reordering & soft motion -----------------
-    const dragBehaviour = d3
-      .drag<SVGGElement, NodeLayout>()
-      .on('start', function (event, d) {
-        // prevent background click
-        event.sourceEvent.stopPropagation();
-        (d as any)._snapY = d.y;
-      })
-      .on('drag', function (event, d) {
-        const colNodes = colMap.get(d.colKey);
-        if (!colNodes) return;
+// --- Drag with live continuous reordering & soft motion -----------------
+const dragBehaviour = d3
+  .drag<SVGGElement, NodeLayout>()
+  .on('start', (event, d) => {
+    // prevent background click
+    event.sourceEvent.stopPropagation();
+    d._snapY = d.y;
+  })
+  .on('drag', (event, d) => {
+    const colNodes = colMap.get(d.colKey);
+    if (!colNodes) return;
 
-        const minY = margin.top;
-        const maxY = margin.top + innerHeight - d.height;
+    const minY = margin.top;
+    const maxY = margin.top + innerHeight - d.height;
 
-        // move dragged node, but clamp to canvas
-        d.y = Math.max(minY, Math.min(maxY, d.y + event.dy));
-        d3.select(this).attr('transform', `translate(${d.x},${d.y})`);
+    // move dragged node, but clamp to canvas
+    d.y = Math.max(minY, Math.min(maxY, d.y + event.dy));
 
-        const centerD = d.y + d.height / 2;
+    // move the dragged <g> directly
+    nodeSelection
+      .filter((nd) => nd.id === d.id)
+      .attr('transform', `translate(${d.x},${d.y})`);
 
-        // "snap zones" so dragging to top/bottom always lets it become first/last
-        const topSnapZone = margin.top + nodePadding * 0.5;
-        const bottomSnapZone =
-          margin.top + innerHeight - nodePadding * 0.5 - d.height;
+    const centerD = d.y + d.height / 2;
 
-        let newIndex: number;
+    // "snap zones" so dragging to top/bottom always lets it become first/last
+    const topSnapZone = margin.top + nodePadding * 0.5;
+    const bottomSnapZone =
+      margin.top + innerHeight - nodePadding * 0.5 - d.height;
 
-        if (d.y <= topSnapZone) {
-          // force to very top slot
-          newIndex = 0;
-        } else if (d.y >= bottomSnapZone) {
-          // force to very bottom slot
-          newIndex = colNodes.length - 1;
-        } else {
-          // otherwise: choose slot based on center relative to other slots
-          const others = colNodes.filter((n) => n.id !== d.id);
-          let yPos = margin.top;
-          const slotCenters: number[] = [];
+    let newIndex: number;
 
-          // imagine the column stacked WITHOUT the dragged node
-          others.forEach((n) => {
-            const c = yPos + n.height / 2;
-            slotCenters.push(c);
-            yPos += n.height + nodePadding;
-          });
+    if (d.y <= topSnapZone) {
+      // force to very top slot
+      newIndex = 0;
+    } else if (d.y >= bottomSnapZone) {
+      // force to very bottom slot
+      newIndex = colNodes.length - 1;
+    } else {
+      // otherwise: choose slot based on center relative to imagined slots
+      const others = colNodes.filter((n) => n.id !== d.id);
+      let yPos = margin.top;
+      const slotCenters: number[] = [];
 
-          newIndex = 0;
-          for (let i = 0; i < slotCenters.length; i++) {
-            if (centerD > slotCenters[i]) newIndex = i + 1;
-          }
-        }
-
-        const currIndex = colNodes.findIndex((n) => n.id === d.id);
-        if (currIndex === -1) return;
-
-        // update logical order in this column
-        if (newIndex !== currIndex) {
-          colNodes.splice(currIndex, 1);
-          colNodes.splice(newIndex, 0, d);
-        }
-
-        // now re-stack all nodes in that column according to new order
-        let yPos = margin.top;
-        colNodes.forEach((n) => {
-          const targetY = yPos;
-          yPos += n.height + nodePadding;
-
-          if (n.id === d.id) {
-            // dragged node will snap here on release
-            (d as any)._snapY = targetY;
-          } else {
-            // neighbours ease into their slots
-            animateNodeTo(n, targetY);
-          }
-        });
-
-        // keep links glued to whatever the current node.y is
-        updateLinkPaths();
-      })
-      .on('end', function () {
-        const d = (this as any).__data__ as NodeLayout;
-        const snapY = (d as any)._snapY ?? d.y;
-
-        const startY = d.y;
-        const sel = d3.select(this as SVGGElement);
-
-        if (Math.abs(snapY - startY) < 0.5) {
-          d.y = snapY;
-          sel.attr('transform', `translate(${d.x},${d.y})`);
-          updateLinkPaths();
-          return;
-        }
-
-        // soft snap into its final slot
-        sel
-          .interrupt()
-          .transition()
-          .duration(260)
-          .ease(d3.easeCubicOut)
-          .tween('move', () => {
-            const interp = d3.interpolateNumber(startY, snapY);
-            return (t: number) => {
-              d.y = interp(t);
-              sel.attr('transform', `translate(${d.x},${d.y})`);
-              updateLinkPaths();
-            };
-          });
+      // imagine the column stacked WITHOUT the dragged node
+      others.forEach((n) => {
+        const c = yPos + n.height / 2;
+        slotCenters.push(c);
+        yPos += n.height + nodePadding;
       });
 
-    (nodeSelection as any).call(dragBehaviour as any);
+      newIndex = 0;
+      for (let i = 0; i < slotCenters.length; i++) {
+        if (centerD > slotCenters[i]) newIndex = i + 1;
+      }
+    }
+
+    const currIndex = colNodes.findIndex((n) => n.id === d.id);
+    if (currIndex === -1) return;
+
+    // update logical order in this column
+    if (newIndex !== currIndex) {
+      colNodes.splice(currIndex, 1);
+      colNodes.splice(newIndex, 0, d);
+    }
+
+    // now re-stack all nodes in that column according to new order
+    let yPos = margin.top;
+    colNodes.forEach((n) => {
+      const targetY = yPos;
+      yPos += n.height + nodePadding;
+
+      if (n.id === d.id) {
+        // dragged node will snap here on release
+        d._snapY = targetY;
+      } else {
+        // neighbours ease into their slots
+        animateNodeTo(n, targetY);
+      }
+    });
+
+    // keep links glued to whatever the current node.y is
+    updateLinkPaths();
+  })
+  .on('end', (_event, d) => {
+    const snapY = d._snapY ?? d.y;
+
+    const startY = d.y;
+    const sel = nodeSelection.filter((nd) => nd.id === d.id);
+
+    if (Math.abs(snapY - startY) < 0.5) {
+      d.y = snapY;
+      sel.attr('transform', `translate(${d.x},${d.y})`);
+      updateLinkPaths();
+      return;
+    }
+
+    // soft snap into its final slot
+    sel
+      .interrupt()
+      .transition()
+      .duration(260)
+      .ease(d3.easeCubicOut)
+      .tween('move', () => {
+        const interp = d3.interpolateNumber(startY, snapY);
+        return (t: number) => {
+          d.y = interp(t);
+          sel.attr('transform', `translate(${d.x},${d.y})`);
+          updateLinkPaths();
+        };
+      });
+  });
+
+nodeSelection.call(dragBehaviour);
 
 
     // --- Click interactions --------------------------------------------------
@@ -642,14 +662,14 @@ export default function BudgetSankey({
     });
 
     // --- Zoom / pan ---------------------------------------------------------
-    const zoomBehaviour = d3
+    const zoomBehaviour: d3.ZoomBehavior<SVGSVGElement, unknown> = d3
       .zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.5, 2])
       .on('zoom', (event) => {
-        gRoot.attr('transform', event.transform as any);
+        gRoot.attr('transform', event.transform.toString());
       });
 
-    (svg as any).call(zoomBehaviour as any);
+    svg.call(zoomBehaviour);
 
     clearHighlight();
   }, [incomeRows, expenseRows, width, height]);
