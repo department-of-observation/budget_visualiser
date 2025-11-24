@@ -70,6 +70,8 @@ export default function BudgetPage() {
     return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
+  const net = totalIncome - totalExpense;
+
   // kept in parent so both tabs read/write same state
   function addIncomeRow() {
     setIncomeRows((prev) => [...prev, { id: `${Date.now()}-inc`, label: '', value: '' }]);
@@ -157,7 +159,7 @@ export default function BudgetPage() {
       {period === 'custom' && (
         <div className="budget-custom-row">
           <label htmlFor="custom-days" className="budget-custom-label">
-            Days per cycle:
+            Days per cycle
           </label>
           <input
             id="custom-days"
@@ -178,7 +180,7 @@ export default function BudgetPage() {
             activeTab === 'input' ? 'btn-tab-input-active' : 'btn-tab-input-inactive'
           }`}
         >
-          Data Input
+          Data input
         </button>
         <button
           onClick={() => setActiveTab('visualisation')}
@@ -192,83 +194,93 @@ export default function BudgetPage() {
 
       {/* TAB CONTENT */}
       {activeTab === 'input' ? (
-        <>
-          {/* ---- BudgetInput (kept inline to avoid circular imports) ---- */}
-          <div>
-            {/* Income input */}
-            <section className="budget-section">
-              <h2 className="budget-section-title">Income</h2>
-              {incomeRows.map((row) => (
-                <div key={row.id} className="budget-row">
-                  <input
-                    value={row.label}
-                    onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'label', e.target.value)}
-                    onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
-                    placeholder="Category"
-                    className="budget-input-label"
-                  />
-                  <input
-                    type="number"
-                    value={row.value}
-                    onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'value', e.target.value)}
-                    onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
-                    placeholder="Amount"
-                    className="budget-input-amount"
-                  />
-                </div>
-              ))}
-              <button onClick={addIncomeRow} className="budget-add-income-btn">
-                Add Income
-              </button>
-            </section>
-
-            {/* Expenditure input */}
-            <section className="budget-section">
-              <h2 className="budget-section-title">Expenditure</h2>
-              {expenseRows.map((row) => (
-                <div key={row.id} className="budget-row">
-                  <input
-                    value={row.label}
-                    onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'label', e.target.value)}
-                    onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
-                    placeholder="Category"
-                    className="budget-input-label"
-                  />
-                  <input
-                    type="number"
-                    value={row.value}
-                    onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'value', e.target.value)}
-                    onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
-                    placeholder="Amount"
-                    className="budget-input-amount"
-                  />
-                </div>
-              ))}
-              <button onClick={addExpenseRow} className="budget-add-expense-btn">
-                Add Expense
-              </button>
-            </section>
-
-            {/* Totals */}
-            <div className="budget-totals">
-              <p>Total Income: {totalIncome.toFixed(2)}</p>
-              <p>Total Expenses: {totalExpense.toFixed(2)}</p>
-              <p>
-                Net: {totalIncome - totalExpense >= 0 ? '+' : ''}
-                {(totalIncome - totalExpense).toFixed(2)}
-              </p>
-            </div>
-
-            {/* Manual Save button at the end of the input tab */}
-            <button
-              type="button"
-              onClick={saveBudgetToLocalStorage}
-              className="budget-save-btn"
-            >
-              Save
+        <div>
+          {/* Income input */}
+          <section className="budget-section">
+            <h2 className="budget-section-title">Income</h2>
+            {incomeRows.map((row) => (
+              <div key={row.id} className="budget-row">
+                <input
+                  value={row.label}
+                  onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'label', e.target.value)}
+                  onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
+                  placeholder="Category"
+                  className="budget-input-label"
+                />
+                <input
+                  type="number"
+                  value={row.value}
+                  onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'value', e.target.value)}
+                  onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
+                  placeholder="Amount"
+                  className="budget-input-amount"
+                />
+              </div>
+            ))}
+            <button onClick={addIncomeRow} className="budget-add-income-btn">
+              Add income
             </button>
+          </section>
+
+          {/* Expenditure input */}
+          <section className="budget-section">
+            <h2 className="budget-section-title">Expenditure</h2>
+            {expenseRows.map((row) => (
+              <div key={row.id} className="budget-row">
+                <input
+                  value={row.label}
+                  onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'label', e.target.value)}
+                  onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
+                  placeholder="Category"
+                  className="budget-input-label"
+                />
+                <input
+                  type="number"
+                  value={row.value}
+                  onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'value', e.target.value)}
+                  onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
+                  placeholder="Amount"
+                  className="budget-input-amount"
+                />
+              </div>
+            ))}
+            <button onClick={addExpenseRow} className="budget-add-expense-btn">
+              Add expense
+            </button>
+          </section>
+
+          {/* Totals */}
+          <div className="budget-totals">
+            <div className="budget-total-row">
+              <span className="label">Total income</span>
+              <span className="value">{totalIncome.toFixed(2)}</span>
+            </div>
+            <div className="budget-total-row">
+              <span className="label">Total expenses</span>
+              <span className="value">{totalExpense.toFixed(2)}</span>
+            </div>
+            <div className="budget-total-row budget-total-row--net">
+              <span className="label">Net</span>
+              <span
+                className={`value ${
+                  net >= 0 ? 'value-positive' : 'value-negative'
+                }`}
+              >
+                {net >= 0 ? '+' : ''}
+                {net.toFixed(2)}
+              </span>
+            </div>
           </div>
-        </>
+
+          {/* Manual Save button at the end of the input tab */}
+          <button
+            type="button"
+            onClick={saveBudgetToLocalStorage}
+            className="budget-save-btn"
+          >
+            Save
+          </button>
+        </div>
       ) : (
         <BudgetVisualisation incomeRows={incomeRows} expenseRows={expenseRows} />
       )}
