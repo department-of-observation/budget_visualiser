@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import type { Row } from '@/app/types';
 import BudgetVisualisation from '@/components/BudgetVisualisation';
 
+const AUTOSAVE_DELAY = 5000; // 5 seconds
+
 export default function BudgetPage() {
   const params = useParams();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,6 +25,39 @@ export default function BudgetPage() {
 
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
+
+  // Load saved data for this budget from localStorage on mount / when budgetId changes.
+  useEffect(() => {
+    if (!budgetId || typeof window === 'undefined') return;
+
+    try {
+      const key = `budget-data-${budgetId}`;
+      const stored = window.localStorage.getItem(key);
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored) as {
+        period?: 'monthly' | 'weekly' | 'annually' | 'custom';
+        customDays?: number;
+        incomeRows?: Row[];
+        expenseRows?: Row[];
+      };
+
+      if (parsed.period) {
+        setPeriod(parsed.period);
+      }
+      if (typeof parsed.customDays === 'number') {
+        setCustomDays(parsed.customDays);
+      }
+      if (Array.isArray(parsed.incomeRows) && parsed.incomeRows.length > 0) {
+        setIncomeRows(parsed.incomeRows);
+      }
+      if (Array.isArray(parsed.expenseRows) && parsed.expenseRows.length > 0) {
+        setExpenseRows(parsed.expenseRows);
+      }
+    } catch {
+      // ignore malformed data
+    }
+  }, [budgetId]);
 
   useEffect(() => {
     const sum = incomeRows.reduce((acc, row) => {
@@ -74,6 +109,38 @@ export default function BudgetPage() {
       setList(list.filter((r) => r.id !== row.id));
     }
   }
+
+  // Shared save helper used by autosave + manual Save button.
+  function saveBudgetToLocalStorage() {
+    if (!budgetId || typeof window === 'undefined') return;
+
+    try {
+      const key = `budget-data-${budgetId}`;
+      const payload = {
+        period,
+        customDays,
+        incomeRows,
+        expenseRows,
+      };
+      window.localStorage.setItem(key, JSON.stringify(payload));
+    } catch {
+      // ignore write errors
+    }
+  }
+
+  // Autosave: whenever values change, wait AUTOSAVE_DELAY ms; if no further changes, save.
+  useEffect(() => {
+    if (!budgetId) return;
+
+    const timeoutId = window.setTimeout(() => {
+      saveBudgetToLocalStorage();
+    }, AUTOSAVE_DELAY);
+
+    // If any dependency changes before delay, clear and restart the timer.
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [budgetId, period, customDays, incomeRows, expenseRows]);
 
   return (
     <div className="p-6">
@@ -198,6 +265,15 @@ export default function BudgetPage() {
                 {(totalIncome - totalExpense).toFixed(2)}
               </p>
             </div>
+
+            {/* Manual Save button at the end of the input tab */}
+            <button
+              type="button"
+              onClick={saveBudgetToLocalStorage}
+              className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Save
+            </button>
           </div>
         </>
       ) : (
