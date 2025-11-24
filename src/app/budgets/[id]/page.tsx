@@ -138,20 +138,16 @@ export default function BudgetPage() {
   }, [budgetId, period, customDays, incomeRows, expenseRows, saveBudgetToLocalStorage]);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Budget: {budgetId}</h1>
+    <div className="budget-page">
+      <h1 className="budget-title">Budget: {budgetId}</h1>
 
       {/* Time period selection */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="budget-period-group">
         {(['monthly', 'weekly', 'annually', 'custom'] as const).map((p) => (
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`rounded-md px-3 py-1 text-sm font-medium border ${
-              period === p
-                ? 'bg-blue-600 text-white border-blue-600'
-                : 'bg-white text-blue-600 border-blue-600 dark:bg-black dark:text-blue-400'
-            }`}
+            className={`btn-period ${period === p ? 'btn-period--active' : 'btn-period--inactive'}`}
           >
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -159,8 +155,8 @@ export default function BudgetPage() {
       </div>
 
       {period === 'custom' && (
-        <div className="mb-4 flex items-center gap-2">
-          <label htmlFor="custom-days" className="text-sm font-medium">
+        <div className="budget-custom-row">
+          <label htmlFor="custom-days" className="budget-custom-label">
             Days per cycle:
           </label>
           <input
@@ -169,29 +165,25 @@ export default function BudgetPage() {
             min={1}
             value={customDays}
             onChange={(e) => setCustomDays(parseInt(e.target.value, 10) || 0)}
-            className="w-20 rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+            className="budget-custom-input"
           />
         </div>
       )}
 
       {/* Tab selection */}
-      <div className="flex gap-2 mb-4">
+      <div className="budget-tabs">
         <button
           onClick={() => setActiveTab('input')}
-          className={`rounded-md px-3 py-1 text-sm font-medium border ${
-            activeTab === 'input'
-              ? 'bg-green-600 text-white border-green-600'
-              : 'bg-white text-green-600 border-green-600 dark:bg-black dark:text-green-400'
+          className={`btn-tab ${
+            activeTab === 'input' ? 'btn-tab-input-active' : 'btn-tab-input-inactive'
           }`}
         >
           Data Input
         </button>
         <button
           onClick={() => setActiveTab('visualisation')}
-          className={`rounded-md px-3 py-1 text-sm font-medium border ${
-            activeTab === 'visualisation'
-              ? 'bg-purple-600 text-white border-purple-600'
-              : 'bg-white text-purple-600 border-purple-600 dark:bg-black dark:text-purple-400'
+          className={`btn-tab ${
+            activeTab === 'visualisation' ? 'btn-tab-vis-active' : 'btn-tab-vis-inactive'
           }`}
         >
           Visualisation
@@ -204,16 +196,16 @@ export default function BudgetPage() {
           {/* ---- BudgetInput (kept inline to avoid circular imports) ---- */}
           <div>
             {/* Income input */}
-            <section className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Income</h2>
+            <section className="budget-section">
+              <h2 className="budget-section-title">Income</h2>
               {incomeRows.map((row) => (
-                <div key={row.id} className="flex flex-wrap gap-2 mb-2">
+                <div key={row.id} className="budget-row">
                   <input
                     value={row.label}
                     onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'label', e.target.value)}
                     onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
                     placeholder="Category"
-                    className="flex-grow min-w-[10rem] rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                    className="budget-input-label"
                   />
                   <input
                     type="number"
@@ -221,29 +213,26 @@ export default function BudgetPage() {
                     onChange={(e) => handleRowChange(incomeRows, setIncomeRows, row.id, 'value', e.target.value)}
                     onBlur={() => handleRowBlur(incomeRows, setIncomeRows, row)}
                     placeholder="Amount"
-                    className="w-32 rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                    className="budget-input-amount"
                   />
                 </div>
               ))}
-              <button
-                onClick={addIncomeRow}
-                className="mt-2 rounded-md bg-green-600 px-3 py-1 text-white hover:bg-green-700"
-              >
+              <button onClick={addIncomeRow} className="budget-add-income-btn">
                 Add Income
               </button>
             </section>
 
             {/* Expenditure input */}
-            <section className="mb-6">
-              <h2 className="text-xl font-semibold mb-2">Expenditure</h2>
+            <section className="budget-section">
+              <h2 className="budget-section-title">Expenditure</h2>
               {expenseRows.map((row) => (
-                <div key={row.id} className="flex flex-wrap gap-2 mb-2">
+                <div key={row.id} className="budget-row">
                   <input
                     value={row.label}
                     onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'label', e.target.value)}
                     onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
                     placeholder="Category"
-                    className="flex-grow min-w-[10rem] rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                    className="budget-input-label"
                   />
                   <input
                     type="number"
@@ -251,20 +240,17 @@ export default function BudgetPage() {
                     onChange={(e) => handleRowChange(expenseRows, setExpenseRows, row.id, 'value', e.target.value)}
                     onBlur={() => handleRowBlur(expenseRows, setExpenseRows, row)}
                     placeholder="Amount"
-                    className="w-32 rounded-md border px-2 py-1 dark:bg-black dark:border-gray-700"
+                    className="budget-input-amount"
                   />
                 </div>
               ))}
-              <button
-                onClick={addExpenseRow}
-                className="mt-2 rounded-md bg-red-600 px-3 py-1 text-white hover:bg-red-700"
-              >
+              <button onClick={addExpenseRow} className="budget-add-expense-btn">
                 Add Expense
               </button>
             </section>
 
             {/* Totals */}
-            <div className="mt-4 font-medium space-y-1">
+            <div className="budget-totals">
               <p>Total Income: {totalIncome.toFixed(2)}</p>
               <p>Total Expenses: {totalExpense.toFixed(2)}</p>
               <p>
@@ -277,7 +263,7 @@ export default function BudgetPage() {
             <button
               type="button"
               onClick={saveBudgetToLocalStorage}
-              className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              className="budget-save-btn"
             >
               Save
             </button>

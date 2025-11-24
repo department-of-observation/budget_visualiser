@@ -24,3 +24,233 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* -------- Budget page styles -------- */
+
+.budget-page {
+  padding: 1.5rem; /* p-6 */
+}
+
+.budget-title {
+  font-size: 1.5rem; /* text-2xl */
+  line-height: 2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+/* Period selector */
+
+.budget-period-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btn-period {
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-width: 1px;
+  border-style: solid;
+  cursor: pointer;
+}
+
+.btn-period--active {
+  background-color: #2563eb; /* blue-600 */
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.btn-period--inactive {
+  background-color: #ffffff;
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+.dark .btn-period--inactive {
+  background-color: #000000;
+  color: #60a5fa; /* blue-400 */
+}
+
+/* Custom days */
+
+.budget-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.budget-custom-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.budget-custom-input {
+  width: 5rem;
+  border-radius: 0.375rem;
+  border: 1px solid #d1d5db;
+  padding: 0.25rem 0.5rem;
+}
+
+.dark .budget-custom-input {
+  background-color: #000000;
+  border-color: #374151;
+  color: var(--foreground);
+}
+
+/* Tabs */
+
+.budget-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btn-tab {
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-width: 1px;
+  border-style: solid;
+  cursor: pointer;
+}
+
+/* Input tab */
+
+.btn-tab-input-active {
+  background-color: #16a34a; /* green-600 */
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.btn-tab-input-inactive {
+  background-color: #ffffff;
+  color: #16a34a;
+  border-color: #16a34a;
+}
+
+.dark .btn-tab-input-inactive {
+  background-color: #000000;
+  color: #4ade80; /* green-400 */
+}
+
+/* Visualisation tab */
+
+.btn-tab-vis-active {
+  background-color: #9333ea; /* purple-600 */
+  color: #ffffff;
+  border-color: #9333ea;
+}
+
+.btn-tab-vis-inactive {
+  background-color: #ffffff;
+  color: #9333ea;
+  border-color: #9333ea;
+}
+
+.dark .btn-tab-vis-inactive {
+  background-color: #000000;
+  color: #c4b5fd; /* purple-300/400-ish */
+}
+
+/* Sections */
+
+.budget-section {
+  margin-bottom: 1.5rem;
+}
+
+.budget-section-title {
+  font-size: 1.25rem; /* text-xl */
+  line-height: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.budget-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.budget-input-label,
+.budget-input-amount {
+  border-radius: 0.375rem;
+  border: 1px solid #d1d5db;
+  padding: 0.25rem 0.5rem;
+}
+
+.budget-input-label {
+  flex-grow: 1;
+  min-width: 10rem;
+}
+
+.budget-input-amount {
+  width: 8rem;
+}
+
+.dark .budget-input-label,
+.dark .budget-input-amount {
+  background-color: #000000;
+  border-color: #374151;
+  color: var(--foreground);
+}
+
+/* Buttons */
+
+.budget-add-income-btn,
+.budget-add-expense-btn,
+.budget-save-btn {
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.budget-add-income-btn {
+  margin-top: 0.5rem;
+  background-color: #16a34a;
+  color: #ffffff;
+}
+
+.budget-add-income-btn:hover {
+  background-color: #15803d; /* green-700 */
+}
+
+.budget-add-expense-btn {
+  margin-top: 0.5rem;
+  background-color: #dc2626; /* red-600 */
+  color: #ffffff;
+}
+
+.budget-add-expense-btn:hover {
+  background-color: #b91c1c; /* red-700 */
+}
+
+.budget-save-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #2563eb; /* blue-600 */
+  color: #ffffff;
+}
+
+.budget-save-btn:hover {
+  background-color: #1d4ed8; /* blue-700 */
+}
+
+/* Totals */
+
+.budget-totals {
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.budget-totals p + p {
+  margin-top: 0.25rem;
+}
