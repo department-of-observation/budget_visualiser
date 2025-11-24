@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import type { Row } from '@/app/types';
+import type { Row, BudgetPeriod, BudgetStorageData, BudgetTab } from '@/app/types';
 import BudgetVisualisation from '@/components/BudgetVisualisation';
 
 const AUTOSAVE_DELAY = 5000; // 5 seconds
@@ -12,14 +12,7 @@ export default function BudgetPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const budgetId = (params as any)?.id ?? '';
 
-  function loadInitialBudgetFromStorage():
-    | {
-        period?: 'monthly' | 'weekly' | 'annually' | 'custom';
-        customDays?: number;
-        incomeRows?: Row[];
-        expenseRows?: Row[];
-      }
-    | null {
+  function loadInitialBudgetFromStorage(): BudgetStorageData | null {
     if (typeof window === 'undefined' || !budgetId) {
       return null;
     }
@@ -29,12 +22,7 @@ export default function BudgetPage() {
       const stored = window.localStorage.getItem(key);
       if (!stored) return null;
 
-      const parsed = JSON.parse(stored) as {
-        period?: 'monthly' | 'weekly' | 'annually' | 'custom';
-        customDays?: number;
-        incomeRows?: Row[];
-        expenseRows?: Row[];
-      };
+      const parsed = JSON.parse(stored) as BudgetStorageData;
 
       return parsed;
     } catch {
@@ -42,9 +30,9 @@ export default function BudgetPage() {
     }
   }
 
-  const [activeTab, setActiveTab] = useState<'input' | 'visualisation'>('input');
+  const [activeTab, setActiveTab] = useState<BudgetTab>('input');
 
-  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'annually' | 'custom'>(() => {
+  const [period, setPeriod] = useState<BudgetPeriod>(() => {
     const data = loadInitialBudgetFromStorage();
     return data?.period ?? 'monthly';
   });
@@ -123,7 +111,7 @@ export default function BudgetPage() {
 
     try {
       const key = `budget-data-${budgetId}`;
-      const payload = {
+      const payload: BudgetStorageData = {
         period,
         customDays,
         incomeRows,
@@ -147,7 +135,7 @@ export default function BudgetPage() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [budgetId, period, customDays, incomeRows, expenseRows]);
+  }, [budgetId, period, customDays, incomeRows, expenseRows, saveBudgetToLocalStorage]);
 
   return (
     <div className="p-6">
@@ -160,7 +148,9 @@ export default function BudgetPage() {
             key={p}
             onClick={() => setPeriod(p)}
             className={`rounded-md px-3 py-1 text-sm font-medium border ${
-              period === p ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-600 dark:bg-black dark:text-blue-400'
+              period === p
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white text-blue-600 border-blue-600 dark:bg-black dark:text-blue-400'
             }`}
           >
             {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -189,7 +179,9 @@ export default function BudgetPage() {
         <button
           onClick={() => setActiveTab('input')}
           className={`rounded-md px-3 py-1 text-sm font-medium border ${
-            activeTab === 'input' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-green-600 border-green-600 dark:bg-black dark:text-green-400'
+            activeTab === 'input'
+              ? 'bg-green-600 text-white border-green-600'
+              : 'bg-white text-green-600 border-green-600 dark:bg-black dark:text-green-400'
           }`}
         >
           Data Input
@@ -197,7 +189,9 @@ export default function BudgetPage() {
         <button
           onClick={() => setActiveTab('visualisation')}
           className={`rounded-md px-3 py-1 text-sm font-medium border ${
-            activeTab === 'visualisation' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-purple-600 border-purple-600 dark:bg-black dark:text-purple-400'
+            activeTab === 'visualisation'
+              ? 'bg-purple-600 text-white border-purple-600'
+              : 'bg-white text-purple-600 border-purple-600 dark:bg-black dark:text-purple-400'
           }`}
         >
           Visualisation
@@ -231,7 +225,10 @@ export default function BudgetPage() {
                   />
                 </div>
               ))}
-              <button onClick={addIncomeRow} className="mt-2 rounded-md bg-green-600 px-3 py-1 text-white hover:bg-green-700">
+              <button
+                onClick={addIncomeRow}
+                className="mt-2 rounded-md bg-green-600 px-3 py-1 text-white hover:bg-green-700"
+              >
                 Add Income
               </button>
             </section>
@@ -258,7 +255,10 @@ export default function BudgetPage() {
                   />
                 </div>
               ))}
-              <button onClick={addExpenseRow} className="mt-2 rounded-md bg-red-600 px-3 py-1 text-white hover:bg-red-700">
+              <button
+                onClick={addExpenseRow}
+                className="mt-2 rounded-md bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+              >
                 Add Expense
               </button>
             </section>
@@ -284,11 +284,7 @@ export default function BudgetPage() {
           </div>
         </>
       ) : (
-        <BudgetVisualisation
-          incomeRows={incomeRows}
-          expenseRows={expenseRows}
-
-        />
+        <BudgetVisualisation incomeRows={incomeRows} expenseRows={expenseRows} />
       )}
     </div>
   );
