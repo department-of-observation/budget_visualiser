@@ -373,3 +373,47 @@ body {
 .budget-total-row--net .value-negative {
   color: var(--budget-danger);
 }
+.budget-row-delete-btn {
+  border-radius: 999px;
+  border: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  line-height: 1;
+  background: transparent;
+  color: var(--budget-text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out,
+    transform 50ms ease-out;
+}
+
+.budget-row-delete-btn:hover {
+  background-color: rgba(239, 68, 68, 0.06); /* soft red */
+  color: #dc2626;
+  transform: translateY(-0.5px);
+}
+
+.budget-row-delete-btn:focus-visible {
+  outline: 2px solid #fecaca;
+  outline-offset: 2px;
+}
+
+/* Disabled state for "Add" buttons */
+.budget-add-income-btn[disabled],
+.budget-add-expense-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.budget-add-income-btn[disabled]:hover,
+.budget-add-expense-btn[disabled]:hover {
+  background-color: inherit; /* prevents hover darkening when disabled */
+}

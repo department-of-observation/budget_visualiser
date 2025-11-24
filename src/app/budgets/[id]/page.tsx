@@ -72,12 +72,28 @@ export default function BudgetPage() {
 
   const net = totalIncome - totalExpense;
 
+  function hasEmptyRow(list: Row[]): boolean {
+    return list.some(
+      (row) => row.label.trim() === '' && row.value.trim() === '',
+    );
+  }
+
+  const incomeHasEmptyRow = hasEmptyRow(incomeRows);
+  const expenseHasEmptyRow = hasEmptyRow(expenseRows);
+
   // kept in parent so both tabs read/write same state
   function addIncomeRow() {
+    if (incomeHasEmptyRow) return; // block spamming empty rows
     setIncomeRows((prev) => [...prev, { id: `${Date.now()}-inc`, label: '', value: '' }]);
   }
+
   function addExpenseRow() {
+    if (expenseHasEmptyRow) return; // block spamming empty rows
     setExpenseRows((prev) => [...prev, { id: `${Date.now()}-exp`, label: '', value: '' }]);
+  }
+
+  function deleteRow(list: Row[], setList: (rows: Row[]) => void, rowId: string) {
+    setList(list.filter((row) => row.id !== rowId));
   }
 
   function handleRowChange(
@@ -150,6 +166,7 @@ export default function BudgetPage() {
             key={p}
             onClick={() => setPeriod(p)}
             className={`btn-period ${period === p ? 'btn-period--active' : 'btn-period--inactive'}`}
+            type="button"
           >
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -179,6 +196,7 @@ export default function BudgetPage() {
           className={`btn-tab ${
             activeTab === 'input' ? 'btn-tab-input-active' : 'btn-tab-input-inactive'
           }`}
+          type="button"
         >
           Data input
         </button>
@@ -187,6 +205,7 @@ export default function BudgetPage() {
           className={`btn-tab ${
             activeTab === 'visualisation' ? 'btn-tab-vis-active' : 'btn-tab-vis-inactive'
           }`}
+          type="button"
         >
           Visualisation
         </button>
@@ -215,9 +234,22 @@ export default function BudgetPage() {
                   placeholder="Amount"
                   className="budget-input-amount"
                 />
+                <button
+                  type="button"
+                  className="budget-row-delete-btn"
+                  onClick={() => deleteRow(incomeRows, setIncomeRows, row.id)}
+                  aria-label="Remove income row"
+                >
+                  ×
+                </button>
               </div>
             ))}
-            <button onClick={addIncomeRow} className="budget-add-income-btn">
+            <button
+              onClick={addIncomeRow}
+              className="budget-add-income-btn"
+              type="button"
+              disabled={incomeHasEmptyRow}
+            >
               Add income
             </button>
           </section>
@@ -242,9 +274,22 @@ export default function BudgetPage() {
                   placeholder="Amount"
                   className="budget-input-amount"
                 />
+                <button
+                  type="button"
+                  className="budget-row-delete-btn"
+                  onClick={() => deleteRow(expenseRows, setExpenseRows, row.id)}
+                  aria-label="Remove expense row"
+                >
+                  ×
+                </button>
               </div>
             ))}
-            <button onClick={addExpenseRow} className="budget-add-expense-btn">
+            <button
+              onClick={addExpenseRow}
+              className="budget-add-expense-btn"
+              type="button"
+              disabled={expenseHasEmptyRow}
+            >
               Add expense
             </button>
           </section>
