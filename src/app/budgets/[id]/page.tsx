@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Row } from '@/app/types';
 import BudgetVisualisation from '@/components/BudgetVisualisation';
 
@@ -12,28 +12,22 @@ export default function BudgetPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const budgetId = (params as any)?.id ?? '';
 
-  const [activeTab, setActiveTab] = useState<'input' | 'visualisation'>('input');
-  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'annually' | 'custom'>('monthly');
-  const [customDays, setCustomDays] = useState<number>(30);
-
-  const [incomeRows, setIncomeRows] = useState<Row[]>([
-    { id: `${Date.now()}-inc`, label: '', value: '' },
-  ]);
-  const [expenseRows, setExpenseRows] = useState<Row[]>([
-    { id: `${Date.now()}-exp`, label: '', value: '' },
-  ]);
-
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [totalExpense, setTotalExpense] = useState(0);
-
-  // Load saved data for this budget from localStorage on mount / when budgetId changes.
-  useEffect(() => {
-    if (!budgetId || typeof window === 'undefined') return;
+  function loadInitialBudgetFromStorage():
+    | {
+        period?: 'monthly' | 'weekly' | 'annually' | 'custom';
+        customDays?: number;
+        incomeRows?: Row[];
+        expenseRows?: Row[];
+      }
+    | null {
+    if (typeof window === 'undefined' || !budgetId) {
+      return null;
+    }
 
     try {
       const key = `budget-data-${budgetId}`;
       const stored = window.localStorage.getItem(key);
-      if (!stored) return;
+      if (!stored) return null;
 
       const parsed = JSON.parse(stored) as {
         period?: 'monthly' | 'weekly' | 'annually' | 'custom';
@@ -42,38 +36,51 @@ export default function BudgetPage() {
         expenseRows?: Row[];
       };
 
-      if (parsed.period) {
-        setPeriod(parsed.period);
-      }
-      if (typeof parsed.customDays === 'number') {
-        setCustomDays(parsed.customDays);
-      }
-      if (Array.isArray(parsed.incomeRows) && parsed.incomeRows.length > 0) {
-        setIncomeRows(parsed.incomeRows);
-      }
-      if (Array.isArray(parsed.expenseRows) && parsed.expenseRows.length > 0) {
-        setExpenseRows(parsed.expenseRows);
-      }
+      return parsed;
     } catch {
-      // ignore malformed data
+      return null;
     }
-  }, [budgetId]);
+  }
 
-  useEffect(() => {
-    const sum = incomeRows.reduce((acc, row) => {
-      const val = parseFloat(row.value);
-      return acc + (isNaN(val) ? 0 : val);
-    }, 0);
-    setTotalIncome(sum);
-  }, [incomeRows]);
+  const [activeTab, setActiveTab] = useState<'input' | 'visualisation'>('input');
 
-  useEffect(() => {
-    const sum = expenseRows.reduce((acc, row) => {
-      const val = parseFloat(row.value);
-      return acc + (isNaN(val) ? 0 : val);
-    }, 0);
-    setTotalExpense(sum);
-  }, [expenseRows]);
+  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'annually' | 'custom'>(() => {
+    const data = loadInitialBudgetFromStorage();
+    return data?.period ?? 'monthly';
+  });
+
+  const [customDays, setCustomDays] = useState<number>(() => {
+    const data = loadInitialBudgetFromStorage();
+    return typeof data?.customDays === 'number' ? data.customDays : 30;
+  });
+
+  const [incomeRows, setIncomeRows] = useState<Row[]>(() => {
+    const data = loadInitialBudgetFromStorage();
+    if (Array.isArray(data?.incomeRows) && data.incomeRows.length > 0) {
+      return data.incomeRows;
+    }
+    // Initial row uses a simple static ID; new rows use timestamp IDs.
+    return [{ id: 'income-0', label: '', value: '' }];
+  });
+
+  const [expenseRows, setExpenseRows] = useState<Row[]>(() => {
+    const data = loadInitialBudgetFromStorage();
+    if (Array.isArray(data?.expenseRows) && data.expenseRows.length > 0) {
+      return data.expenseRows;
+    }
+    // Initial row uses a simple static ID; new rows use timestamp IDs.
+    return [{ id: 'expense-0', label: '', value: '' }];
+  });
+
+  const totalIncome = incomeRows.reduce((acc, row) => {
+    const val = parseFloat(row.value);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const totalExpense = expenseRows.reduce((acc, row) => {
+    const val = parseFloat(row.value);
+    return acc + (isNaN(val) ? 0 : val);
+  }, 0);
 
   // kept in parent so both tabs read/write same state
   function addIncomeRow() {
@@ -111,7 +118,7 @@ export default function BudgetPage() {
   }
 
   // Shared save helper used by autosave + manual Save button.
-  function saveBudgetToLocalStorage() {
+  const saveBudgetToLocalStorage = useCallback(() => {
     if (!budgetId || typeof window === 'undefined') return;
 
     try {
@@ -126,7 +133,7 @@ export default function BudgetPage() {
     } catch {
       // ignore write errors
     }
-  }
+  }, [budgetId, period, customDays, incomeRows, expenseRows]);
 
   // Autosave: whenever values change, wait AUTOSAVE_DELAY ms; if no further changes, save.
   useEffect(() => {
